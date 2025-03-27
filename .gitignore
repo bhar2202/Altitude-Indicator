@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+AltitudeIndicator/AltitudeIndicator.vcxproj.user
+AltitudeIndicator/AltitudeIndicator.vcxproj.filters
+AltitudeIndicator/AltitudeIndicator.vcxproj
+AltitudeIndicator/AltitudeIndicator.sln
+AltitudeIndicator/.vs/AltitudeIndicator/v17/DocumentLayout.json
+AltitudeIndicator/.vs/AltitudeIndicator/v17/Browse.VC.db
+AltitudeIndicator/.vs/AltitudeIndicator/v17/.suo
+AltitudeIndicator/.vs/AltitudeIndicator/FileContentIndex/f6d1fad1-e96a-4209-b342-f2eb8a58c9c1.vsidx

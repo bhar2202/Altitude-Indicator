@@ -3,6 +3,9 @@ Author: Brack Harmon
 
 */
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -12,6 +15,7 @@ Author: Brack Harmon
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+
 
 unsigned int textures[7];
 
@@ -51,48 +55,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-// This function is called once to initialize the scene and OpenGL
-static void init() {
-    // Initialize time.
-    glfwSetTime(0.0);
-
-    // Set background color.
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-    // Load Textures
-    textures[0] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Background.png");
-    textures[1] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Roll.png");
-    textures[2] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Indicator.png");
-    textures[3] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Pitch.png");
-    textures[4] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/SkyGround.png");
-    textures[5] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/TopBottom.png");
-    textures[6] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Stationary.png");
-
-
-    //GLSL::checkError(GET_FILE_LINE);
-}
-
-void render(unsigned int* shaderProgram, unsigned int* VAO) {
-    // Transformation: Rotate over time
-    glm::mat4 transform = glm::mat4(1.0f);
-    float angle = (float)glfwGetTime() * glm::radians(50.0f);
-    transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    // Use Shader Program
-    glUseProgram(*shaderProgram);
-    int transformLoc = glGetUniformLocation(*shaderProgram, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
-
-    // Bind Texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
-    glUniform1i(glGetUniformLocation(*shaderProgram, "texture1"), 0);
-
-    // Draw Quad
-    glBindVertexArray(*VAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-}
-
 // Function to load texture
 unsigned int loadTexture(const char* path) {
     unsigned int textureID;
@@ -122,6 +84,69 @@ unsigned int loadTexture(const char* path) {
     return textureID;
 }
 
+// This function is called once to initialize the scene and OpenGL
+static void init() {
+    // Initialize time.
+    glfwSetTime(0.0);
+
+    // Set background color.
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+    // Load Textures
+    textures[0] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Background.png");
+    textures[1] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Roll.png");
+    textures[2] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Indicator.png");
+    textures[3] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Pitch.png");
+    textures[4] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/SkyGround.png");
+    textures[5] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/TopBottom.png");
+    textures[6] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Stationary.png");
+
+
+    //GLSL::checkError(GET_FILE_LINE);
+}
+
+bool togglestate = false;
+float rotationSpeed = 30.0f;  // Default speed
+
+void render(unsigned int* shaderProgram, unsigned int* VAO) {
+    // Transformation: Rotate over time
+    glm::mat4 transform = glm::mat4(1.0f);
+    float angle = (float)glfwGetTime() * glm::radians(50.0f);
+    transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // Use Shader Program
+    glUseProgram(*shaderProgram);
+    int transformLoc = glGetUniformLocation(*shaderProgram, "transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+
+    // Bind Texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    glUniform1i(glGetUniformLocation(*shaderProgram, "texture1"), 0);
+
+    // Draw Quad
+    glBindVertexArray(*VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    // Draw UI buttons
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Controls");
+    
+    ImGui::Checkbox("Toggle Rotation", &togglestate);
+
+    
+    ImGui::SliderFloat("Rotation Speed", &rotationSpeed, 0.0f, 100.0f); // Adjust speed
+    ImGui::End();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+
+
 int main() {
 
     // Initialize GLFW library
@@ -145,6 +170,15 @@ int main() {
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    // Initialize IMGUI for UI elements
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     // Define Vertex Data
     float vertices[] = {
@@ -209,6 +243,11 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    //ImGui cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     // Cleanup
     glDeleteVertexArrays(1, &VAO);

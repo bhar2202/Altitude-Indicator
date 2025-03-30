@@ -107,12 +107,12 @@ static void init() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     // Load Textures
-    textures[0] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Background.png");
-    textures[1] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/SkyGround.png");
-    textures[2] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Pitch.png");
-    textures[3] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/TopBottom.png");
-    textures[4] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Roll.png");
-    textures[5] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Stationary.png");
+    textures[0] = loadTexture("Rescources/Background.png");
+    textures[1] = loadTexture("Rescources/SkyGround.png");
+    textures[2] = loadTexture("Rescources/Pitch.png");
+    textures[3] = loadTexture("Rescources/TopBottom.png");
+    textures[4] = loadTexture("Rescources/Roll.png");
+    textures[5] = loadTexture("Rescources/Stationary.png");
 
     //Start with background, indicator, and stationary visible
     layerToggles[0] = true;

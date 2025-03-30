@@ -1,6 +1,5 @@
 /*
 Author: Brack Harmon
-
 */
 
 #include "imgui.h"
@@ -16,15 +15,19 @@ Author: Brack Harmon
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-
+#include <algorithm>
 
 unsigned int textures[6];
 bool layerToggles[7];
-float pitchValue = 0.0f;
-float rollValue = 0.0f;
-float pitchScale = 0.005f;
+int pitchValue = 0.0f;
+int rollValue = 0.0f;
+float pitchScale = 0.004f;
+int minPitch = -40.0f;
+int maxPitch = 40.0f;
+int minRoll = -90.0f;
+int maxRoll = 90.0f;
 
-// Vertex Shader Source Code
+// Vertex Shader Code
 const char* vertexShaderSource = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -40,7 +43,7 @@ void main()
     TexCoord = aTexCoord;
 })";
 
-// Fragment Shader Source Code
+// Fragment Shader Code
 const char* fragmentShaderSource = R"(
 #version 330 core
 out vec4 FragColor;
@@ -60,7 +63,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-// Function to load texture
+/// <summary>
+/// Loads a Texture given it's file path location
+/// </summary>
+/// <param name="path"> Path to texture file</param>
+/// <returns> The texture ID</returns>
 unsigned int loadTexture(const char* path) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -89,7 +96,9 @@ unsigned int loadTexture(const char* path) {
     return textureID;
 }
 
-// This function is called once to initialize the scene and OpenGL
+/// <summary>
+/// This function is called once to initialize the scene
+/// </summary>
 static void init() {
     // Initialize time.
     glfwSetTime(0.0);
@@ -105,27 +114,31 @@ static void init() {
     textures[4] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Roll.png");
     textures[5] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Stationary.png");
 
-
-    //GLSL::checkError(GET_FILE_LINE);
+    //Start with background, indicator, and stationary visible
+    layerToggles[0] = true;
+    layerToggles[5] = true;
+    layerToggles[6] = true;
 }
 
-
-
+/// <summary>
+/// Called once per iteration of render loop
+/// </summary>
+/// <param name="shaderProgram"></param>
+/// <param name="VAO"></param>
 void render(unsigned int* shaderProgram, unsigned int* VAO) {
-    // Transformation: Rotate over time
+
+    // Base Transformation
     glm::mat4 transform = glm::mat4(1.0f);
-    //float angle = (float)glfwGetTime() * glm::radians(50.0f);
-    //transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
     // Use Shader Program
     glUseProgram(*shaderProgram);
     int transformLoc = glGetUniformLocation(*shaderProgram, "transform");
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
-    //Matric Stack
+    // Matrix Stack for transformations
     auto MS = std::make_shared<MatrixStack>();
 
-    //iterate through each texture
+    // Iterate through each texture
     for (int i = 0; i < 5; i++) {
         if (layerToggles[i]) {
             // Bind Texture
@@ -141,11 +154,10 @@ void render(unsigned int* shaderProgram, unsigned int* VAO) {
     }
 
     // Indicator
-    
     if (layerToggles[5]) {
 
         MS->pushMatrix();
-        MS->rotate(glm::radians(-rollValue), glm::vec3(0.0f, 0.0f, 1.0f));
+        MS->rotate(glm::radians(-rollValue * 1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
         for (int i = 1; i < 5; i++) {
             if (i == 2) {
                 //Translate the pitch indicator based on pitch value
@@ -180,11 +192,9 @@ void render(unsigned int* shaderProgram, unsigned int* VAO) {
         }
         MS->popMatrix();
     }
-    
 
     //Draw Stationary if enabled
     if (layerToggles[6]) {
-
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
         // Bind Texture
@@ -196,9 +206,8 @@ void render(unsigned int* shaderProgram, unsigned int* VAO) {
         glBindVertexArray(*VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
-    
 
-    // Draw UI buttons
+    // Draw UI Panel
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -211,15 +220,18 @@ void render(unsigned int* shaderProgram, unsigned int* VAO) {
     ImGui::Checkbox("Indicator", &layerToggles[5]);
     ImGui::Checkbox("Stationary", &layerToggles[6]);
 
-    ImGui::SliderFloat("Pitch Value", &pitchValue, -40.0f, 40.0f);
-    ImGui::SliderFloat("Roll Value", &rollValue, -90.0f, 90.0f);
+    if (ImGui::InputInt("Pitch Value", &pitchValue)) {
+        pitchValue = std::clamp(pitchValue, minPitch, maxPitch);
+    }
+    
+    if (ImGui::InputInt("Roll Value", &rollValue)) {
+        rollValue = std::clamp(rollValue, minRoll, maxRoll);
+    }
     
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
-
-
 
 int main() {
 
@@ -232,13 +244,15 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 800, "Altitude Indicator", NULL, NULL);
+    // Initialize window
+    GLFWwindow* window = glfwCreateWindow(800, 800, "Attitude Indicator", NULL, NULL);
     if (!window) {
         std::cout << "Failed to create GLFW window\n";
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
+
     // Load OpenGL functions using GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
@@ -250,13 +264,12 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     ImGui::StyleColorsDark();
-
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
     // Define Vertex Data
     float vertices[] = {
-        // Positions       // Texture Coords
+        // Positions         // Texture Coords
         -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,
          0.5f, -0.5f, 0.0f,  1.0f, 0.0f,
          0.5f,  0.5f, 0.0f,  1.0f, 1.0f,
@@ -307,10 +320,11 @@ int main() {
     //Initialize scene
     init();
 
-    // Main Loop
+    // Render Loop
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
 
+        //Render Scene
         render(&shaderProgram, &VAO);
 
         // Swap Buffers and Poll Events

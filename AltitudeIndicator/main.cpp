@@ -6,6 +6,7 @@ Author: Brack Harmon
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "MatrixStack.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -17,7 +18,11 @@ Author: Brack Harmon
 #include <iostream>
 
 
-unsigned int textures[7];
+unsigned int textures[6];
+bool layerToggles[7];
+float pitchValue = 0.0f;
+float rollValue = 0.0f;
+float pitchScale = 0.005f;
 
 // Vertex Shader Source Code
 const char* vertexShaderSource = R"(
@@ -42,11 +47,11 @@ out vec4 FragColor;
 
 in vec2 TexCoord;
 
-uniform sampler2D texture1;
+uniform sampler2D textureData;
 
 void main()
 {
-    FragColor = texture(texture1, TexCoord);
+    FragColor = texture(textureData, TexCoord);
 })";
 
 // Callback function to handle window resizing
@@ -94,53 +99,122 @@ static void init() {
 
     // Load Textures
     textures[0] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Background.png");
-    textures[1] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Roll.png");
-    textures[2] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Indicator.png");
-    textures[3] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Pitch.png");
-    textures[4] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/SkyGround.png");
-    textures[5] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/TopBottom.png");
-    textures[6] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Stationary.png");
+    textures[1] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/SkyGround.png");
+    textures[2] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Pitch.png");
+    textures[3] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/TopBottom.png");
+    textures[4] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Roll.png");
+    textures[5] = loadTexture("C:/Users/Brack/RedBird/Assessment/Altitude-Indicator/AltitudeIndicator/Rescources/Stationary.png");
 
 
     //GLSL::checkError(GET_FILE_LINE);
 }
 
-bool togglestate = false;
-float rotationSpeed = 30.0f;  // Default speed
+
 
 void render(unsigned int* shaderProgram, unsigned int* VAO) {
     // Transformation: Rotate over time
     glm::mat4 transform = glm::mat4(1.0f);
-    float angle = (float)glfwGetTime() * glm::radians(50.0f);
-    transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+    //float angle = (float)glfwGetTime() * glm::radians(50.0f);
+    //transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
     // Use Shader Program
     glUseProgram(*shaderProgram);
     int transformLoc = glGetUniformLocation(*shaderProgram, "transform");
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
-    // Bind Texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
-    glUniform1i(glGetUniformLocation(*shaderProgram, "texture1"), 0);
+    //Matric Stack
+    auto MS = std::make_shared<MatrixStack>();
 
-    // Draw Quad
-    glBindVertexArray(*VAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    //iterate through each texture
+    for (int i = 0; i < 5; i++) {
+        if (layerToggles[i]) {
+            // Bind Texture
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, textures[i]);
+            glUniform1i(glGetUniformLocation(*shaderProgram, "textureData"), 0);
+
+            // Draw Quad
+            glBindVertexArray(*VAO);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        }
+        
+    }
+
+    // Indicator
+    
+    if (layerToggles[5]) {
+
+        MS->pushMatrix();
+        MS->rotate(glm::radians(-rollValue), glm::vec3(0.0f, 0.0f, 1.0f));
+        for (int i = 1; i < 5; i++) {
+            if (i == 2) {
+                //Translate the pitch indicator based on pitch value
+                MS->pushMatrix();
+                MS->translate(glm::vec3(0.0f, -pitchValue * pitchScale, 0.0f));
+
+                glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(MS->topMatrix()));
+                
+                // Bind Texture
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, textures[i]);
+                glUniform1i(glGetUniformLocation(*shaderProgram, "textureData"), 0);
+
+                // Draw Quad
+                glBindVertexArray(*VAO);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+                MS->popMatrix();
+            }
+            else {
+                glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(MS->topMatrix()));
+                
+                // Bind Texture
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, textures[i]);
+                glUniform1i(glGetUniformLocation(*shaderProgram, "textureData"), 0);
+
+                // Draw Quad
+                glBindVertexArray(*VAO);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            }
+        }
+        MS->popMatrix();
+    }
+    
+
+    //Draw Stationary if enabled
+    if (layerToggles[6]) {
+
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+
+        // Bind Texture
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, textures[5]);
+        glUniform1i(glGetUniformLocation(*shaderProgram, "textureData"), 0);
+
+        // Draw Quad
+        glBindVertexArray(*VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+    
 
     // Draw UI buttons
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    ImGui::Begin("Layers to Display");
+    ImGui::Checkbox("Background", &layerToggles[0]);
+    ImGui::Checkbox("SkyGround", &layerToggles[1]);
+    ImGui::Checkbox("Pitch", &layerToggles[2]);
+    ImGui::Checkbox("TopBottom", &layerToggles[3]);
+    ImGui::Checkbox("Roll", &layerToggles[4]);
+    ImGui::Checkbox("Indicator", &layerToggles[5]);
+    ImGui::Checkbox("Stationary", &layerToggles[6]);
 
-    ImGui::Begin("Controls");
+    ImGui::SliderFloat("Pitch Value", &pitchValue, -40.0f, 40.0f);
+    ImGui::SliderFloat("Roll Value", &rollValue, -90.0f, 90.0f);
     
-    ImGui::Checkbox("Toggle Rotation", &togglestate);
-
-    
-    ImGui::SliderFloat("Rotation Speed", &rotationSpeed, 0.0f, 100.0f); // Adjust speed
     ImGui::End();
-
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
